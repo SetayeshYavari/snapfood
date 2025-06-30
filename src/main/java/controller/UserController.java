@@ -3,6 +3,8 @@ package controller;
 import com.google.gson.Gson;
 import model.User;
 import services.UserService;
+import utils.SimpleJwtUtil;
+
 import static spark.Spark.*;
 
 public class UserController {
@@ -10,6 +12,25 @@ public class UserController {
     private static final Gson gson = new Gson();
 
     public static void initRoutes() {
+        before("/users/*", (req, res) -> {
+            if (req.requestMethod().equals("OPTIONS") ||
+                    req.pathInfo().equals("/users/register") ||
+                    req.pathInfo().equals("/users/login")) {
+                return;
+            }
+
+            String authHeader = req.headers("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                res.status(401);
+                halt(401, gson.toJson(new ErrorResponse("Missing or invalid token")));
+            }
+
+            String token = authHeader.substring(7);
+            if (!SimpleJwtUtil.validateToken(token)) {
+                res.status(401);
+                halt(401, gson.toJson(new ErrorResponse("Invalid or expired token")));
+            }
+        });
         path("/users", () -> {
             get("", (req, res) -> gson.toJson(userService.getAllUsers()));
 
@@ -23,12 +44,34 @@ public class UserController {
                 return gson.toJson(user);
             });
 
-            post("", (req, res) -> {
+            // Register
+            post("/register", (req, res) -> {
                 User user = gson.fromJson(req.body(), User.class);
-                return gson.toJson(userService.createUser(user));
+                User registered = userService.register(user);
+                if (registered == null) {
+                    res.status(400);
+                    return gson.toJson(new ErrorResponse("Phone already registered"));
+                }
+                res.status(201);
+                return gson.toJson(registered);
             });
 
-            put("/:id", (req, res) -> {
+            // Login
+            post("/login", (req, res) -> {
+                User loginUser = gson.fromJson(req.body(), User.class);
+                User loggedIn = userService.login(loginUser.getPhone(), loginUser.getPassword());
+                if (loggedIn == null) {
+                    res.status(401);
+                    return gson.toJson(new ErrorResponse("Invalid phone or password"));
+                }
+
+                String token = SimpleJwtUtil.generateToken(loggedIn.getId(), loggedIn.getRole());
+                LoginResponse response = new LoginResponse(loggedIn);
+                response.token = token;
+                return gson.toJson(response);
+            });
+
+            put("/users/:id/profile", (req, res) -> {
                 int id = Integer.parseInt(req.params(":id"));
                 User user = gson.fromJson(req.body(), User.class);
                 User updated = userService.updateUser(id, user);
@@ -38,6 +81,7 @@ public class UserController {
                 }
                 return gson.toJson(updated);
             });
+
 
             delete("/:id", (req, res) -> {
                 int id = Integer.parseInt(req.params(":id"));
@@ -50,4 +94,25 @@ public class UserController {
             });
         });
     }
+
+    private static class ErrorResponse {
+        String error;
+        public ErrorResponse(String error) { this.error = error; }
+    }
+
+    private static class LoginResponse {
+        int id;
+        String name;
+        String role;
+        String message;
+        String token; // JWT token
+
+        public LoginResponse(User user) {
+            this.id = user.getId();
+            this.name = user.getFullName();
+            this.role = user.getRole();
+            this.message = "Login successful!";
+        }
+    }
 }
+
