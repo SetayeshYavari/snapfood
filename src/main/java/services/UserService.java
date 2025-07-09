@@ -10,7 +10,9 @@ public class UserService {
 
     public User register(User user) {
         // Check if user with this phone already exists
+        System.out.println("☎️ Registering phone: " + user.getPhone());
         User existing = UserDAO.findByPhone(user.getPhone());
+        System.out.println("🧠 Existing user: " + (existing == null ? "none" : existing.getId()));
         if (existing != null) {
             return null; // Phone already registered
         }
@@ -31,14 +33,18 @@ public class UserService {
         User user = UserDAO.findByPhone(phone);
         if (user != null) {
             // Verify password with salt
+            System.out.println("🔍 User found in DB: " + user.getPhone());
             boolean passwordCorrect = PasswordUtil.verifyPassword(
                     password,
                     user.getSalt(),
                     user.getPassword()
             );
+            System.out.println("🔐 Password correct? " + passwordCorrect);
             if (passwordCorrect) {
                 return user;
             }
+        } else {
+            System.out.println("❌ No user found with phone: " + phone);
         }
         return null;
     }

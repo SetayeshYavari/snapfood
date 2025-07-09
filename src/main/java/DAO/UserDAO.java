@@ -12,8 +12,6 @@ public class UserDAO {
 
     // ✅ Add user and return inserted user with ID
     public static User addUser(User user) {
-        String salt = PasswordUtil.generateSalt();
-        String hashedPassword = PasswordUtil.hashPassword(user.getPassword(), salt);
 
         String sql = "INSERT INTO users (full_name, phone, email, password, role, address, profile_photo_url, bank_info, brand_name, restaurant_description, salt) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
@@ -31,13 +29,11 @@ public class UserDAO {
             stmt.setString(8, user.getBankInfo());
             stmt.setString(9, user.getBrandName());
             stmt.setString(10, user.getRestaurantDescription());
-            stmt.setString(11, salt);
+            stmt.setString(11, user.getSalt());
 
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 user.setId(rs.getInt("id"));
-                user.setSalt(salt);
-                user.setPassword(hashedPassword);
                 System.out.println("✅ User inserted with ID: " + user.getId());
                 return user;
             }

@@ -8,5 +8,6 @@ public class simpleSparkServer {
         port(8080);
         UserController.initRoutes();
         get("/", (req, res) -> "Food Service API is running!");
+        System.out.println("==> Spark has started on http://localhost:8080");
     }
 }
