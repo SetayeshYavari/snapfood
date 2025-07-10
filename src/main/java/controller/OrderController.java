@@ -5,9 +5,10 @@ import model.Order;
 import services.OrderService;
 import utils.SimpleJwtUtil;
 
-import static spark.Spark.*;
-
+import java.time.LocalDate;
 import java.util.List;
+
+import static spark.Spark.*;
 
 public class OrderController {
     private static final OrderService service = new OrderService();
@@ -26,46 +27,114 @@ public class OrderController {
                 }
             });
 
-            // Place order endpoint
             post("", (req, res) -> {
                 String token = req.headers("Authorization").substring(7);
                 int userId = SimpleJwtUtil.getUserIdFromToken(token);
 
                 Order order = gson.fromJson(req.body(), Order.class);
                 order.setUserId(userId);
-                Order savedOrder = service.placeOrder(order);
+                Order saved = service.placeOrder(order);
 
-                if (savedOrder == null) {
+                if (saved == null) {
                     res.status(500);
                     return gson.toJson(new ErrorResponse("Failed to place order"));
                 }
                 res.status(201);
-                return gson.toJson(savedOrder);
+                return gson.toJson(saved);
             });
 
-            // Get past orders for logged-in user
-            get("/my", (req, res) -> {
+            get("", (req, res) -> {
                 String token = req.headers("Authorization").substring(7);
                 int userId = SimpleJwtUtil.getUserIdFromToken(token);
-
                 List<Order> orders = service.getOrdersByUser(userId);
                 res.type("application/json");
                 return gson.toJson(orders);
             });
 
-            // Cancel order endpoint
-            put("/:id/cancel", (req, res) -> {
+            post("/cancel/:id", (req, res) -> {
                 String token = req.headers("Authorization").substring(7);
                 int userId = SimpleJwtUtil.getUserIdFromToken(token);
                 int orderId = Integer.parseInt(req.params("id"));
 
-                boolean canceled = service.cancelOrder(orderId, userId);
-                if (!canceled) {
+                boolean cancelled = service.cancelOrder(orderId, userId);
+                if (!cancelled) {
                     res.status(400);
-                    return gson.toJson(new ErrorResponse("Cannot cancel order"));
+                    return gson.toJson(new ErrorResponse("Cannot cancel order (maybe already shipped or doesn't belong to you)"));
                 }
-                return gson.toJson(new SuccessResponse("Order canceled successfully"));
+                return gson.toJson(new SuccessResponse("Order cancelled successfully"));
             });
+
+            // Seller views all orders for their restaurant
+            get("/restaurant", (req, res) -> {
+                String token = req.headers("Authorization").substring(7);
+                int restaurantId = SimpleJwtUtil.getRestaurantIdFromToken(token);
+                List<Order> orders = service.getOrdersByRestaurant(restaurantId);
+                res.type("application/json");
+                return gson.toJson(orders);
+            });
+
+            // Seller confirms order
+            put("/:id/confirm", (req, res) -> {
+                String token = req.headers("Authorization").substring(7);
+                int restaurantId = SimpleJwtUtil.getRestaurantIdFromToken(token);
+                int orderId = Integer.parseInt(req.params("id"));
+                boolean confirmed = service.confirmOrder(orderId, restaurantId);
+                if (!confirmed) {
+                    res.status(400);
+                    return gson.toJson(new ErrorResponse("Cannot confirm order"));
+                }
+                return gson.toJson(new SuccessResponse("Order confirmed"));
+            });
+
+            put("/:id/assign", (req, res) -> {
+                String token = req.headers("Authorization").substring(7);
+                String role = SimpleJwtUtil.getRoleFromToken(token);
+                if (!"courier".equals(role)) {
+                    halt(403, gson.toJson(new ErrorResponse("Forbidden")));
+                }
+                int courierId = SimpleJwtUtil.getUserIdFromToken(token);
+                int orderId = Integer.parseInt(req.params("id"));
+
+                boolean assigned = service.assignCourier(orderId, courierId);
+                if (!assigned) {
+                    res.status(400);
+                    return gson.toJson(new ErrorResponse("Failed to assign courier"));
+                }
+                return gson.toJson(new SuccessResponse("Courier assigned successfully"));
+            });
+
+            put("/:id/status", (req, res) -> {
+                String token = req.headers("Authorization").substring(7);
+                int courierId = SimpleJwtUtil.getUserIdFromToken(token);
+                String newStatus = gson.fromJson(req.body(), StatusRequest.class).status;
+                int orderId = Integer.parseInt(req.params("id"));
+
+                boolean updated = service.updateDeliveryStatus(orderId, courierId, newStatus);
+                if (!updated) {
+                    res.status(400);
+                    return gson.toJson(new ErrorResponse("Failed to update delivery status"));
+                }
+                return gson.toJson(new SuccessResponse("Delivery status updated"));
+            });
+
+            // GET /orders/history?status=DELIVERED&from=2024-01-01&to=2024-12-31
+            get("/history", (req, res) -> {
+                String token = req.headers("Authorization").substring(7);
+                int userId = SimpleJwtUtil.getUserIdFromToken(token);
+
+                String status = req.queryParams("status");
+                String fromStr = req.queryParams("from");
+                String toStr = req.queryParams("to");
+
+                LocalDate from = (fromStr != null) ? LocalDate.parse(fromStr) : null;
+                LocalDate to = (toStr != null) ? LocalDate.parse(toStr) : null;
+
+                List<Order> orders = service.getUserOrderHistory(userId, status, from, to);
+                res.type("application/json");
+                return gson.toJson(orders);
+            });
+
+
         });
     }
 
@@ -77,5 +146,10 @@ public class OrderController {
         String message;
         public SuccessResponse(String message) { this.message = message; }
     }
+
+    private static class StatusRequest {
+        String status;
+    }
+
 }
 

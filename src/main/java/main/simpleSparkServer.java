@@ -1,6 +1,8 @@
 package main;
 
 import static spark.Spark.*;
+
+import controller.AdminController;
 import controller.UserController;
 import controller.RestaurantController;
 import controller.FoodController;
@@ -13,6 +15,7 @@ public class simpleSparkServer {
         UserController.initRoutes();
         RestaurantController.initRoutes();
         FoodController.initRoutes();
+        AdminController.initRoutes();
         get("/", (req, res) -> "Food Service API is running!");
         System.out.println("==> Spark has started on http://localhost:8080");
     }

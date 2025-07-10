@@ -12,13 +12,25 @@ public class SimpleJwtUtil {
     private static final long EXPIRATION_TIME = 86400000;
 
     public static String generateToken(int userId, String role) {
+        return generateToken(userId, role, -1); // No restaurantId
+    }
+
+    public static String generateToken(int userId, String role, int restaurantId) {
         long now = System.currentTimeMillis();
         long exp = now + EXPIRATION_TIME;
 
+        StringBuilder payload = new StringBuilder();
+        payload.append(String.format("{\"sub\":%d,\"role\":\"%s\",\"iat\":%d,\"exp\":%d",
+                userId, role, now / 1000, exp / 1000));
+
+        if ("SELLER".equalsIgnoreCase(role) && restaurantId > 0) {
+            payload.append(String.format(",\"restaurantId\":%d", restaurantId));
+        }
+
+        payload.append("}");
+
         String header = base64UrlEncode("{\"alg\":\"HS256\",\"typ\":\"JWT\"}".getBytes());
-        String payload = String.format("{\"sub\":%d,\"role\":\"%s\",\"iat\":%d,\"exp\":%d}",
-                userId, role, now / 1000, exp / 1000);
-        String encodedPayload = base64UrlEncode(payload.getBytes());
+        String encodedPayload = base64UrlEncode(payload.toString().getBytes());
 
         String data = header + "." + encodedPayload;
         String signature = hmacSha256(data, SECRET);
@@ -56,6 +68,13 @@ public class SimpleJwtUtil {
         return matcher.find() ? matcher.group(1) : null;
     }
 
+    public static int getRestaurantIdFromToken(String token) {
+        String payload = new String(Base64.getUrlDecoder().decode(token.split("\\.")[1]));
+        Matcher matcher = Pattern.compile("\"restaurantId\":(\\d+)").matcher(payload);
+        if (matcher.find()) return Integer.parseInt(matcher.group(1));
+        throw new RuntimeException("No restaurantId found in token");
+    }
+
     private static String hmacSha256(String data, String key) {
         try {
             SecretKey secretKey = new SecretKeySpec(key.getBytes(), "HmacSHA256");
@@ -77,3 +96,4 @@ public class SimpleJwtUtil {
         throw new RuntimeException("Value not found in token");
     }
 }
+

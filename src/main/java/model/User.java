@@ -31,7 +31,6 @@ public class User {
         this.salt = salt;
     }
 
-    // --- Getters and Setters ---
 
     public int getId() {
         return id;

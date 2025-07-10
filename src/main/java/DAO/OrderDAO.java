@@ -5,6 +5,7 @@ import model.OrderItem;
 import utils.DB;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -74,7 +75,49 @@ public class OrderDAO {
         return orders;
     }
 
-    public Order getOrderById(int orderId) {
+    public List<Order> getOrdersByUserWithFilters(int userId, String status, LocalDate fromDate, LocalDate toDate) {
+        List<Order> orders = new ArrayList<>();
+        StringBuilder sql = new StringBuilder("SELECT * FROM orders WHERE user_id = ?");
+        List<Object> params = new ArrayList<>();
+        params.add(userId);
+
+        if (status != null && !status.isEmpty()) {
+            sql.append(" AND status = ?");
+            params.add(status);
+        }
+
+        if (fromDate != null) {
+            sql.append(" AND created_at >= ?");
+            params.add(Date.valueOf(fromDate));
+        }
+
+        if (toDate != null) {
+            sql.append(" AND created_at <= ?");
+            params.add(Date.valueOf(toDate));
+        }
+
+        sql.append(" ORDER BY created_at DESC");
+
+        try (Connection conn = DB.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                stmt.setObject(i + 1, params.get(i));
+            }
+
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                Order order = mapResultSetToOrder(rs);
+                order.setItems(getOrderItems(order.getId()));
+                orders.add(order);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return orders;
+    }
+
+    public static Order getOrderById(int orderId) {
         String sql = "SELECT * FROM orders WHERE id = ?";
         try (Connection conn = DB.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -91,14 +134,26 @@ public class OrderDAO {
         return null;
     }
 
-    public boolean updateOrderStatus(int orderId, String status) {
+    public static boolean updateOrderStatus(int orderId, String status) {
         String sql = "UPDATE orders SET status = ? WHERE id = ?";
         try (Connection conn = DB.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, status);
             stmt.setInt(2, orderId);
-            int affected = stmt.executeUpdate();
-            return affected > 0;
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean assignCourier(int orderId, int courierId) {
+        String sql = "UPDATE orders SET courier_id = ?, status = 'ON_THE_WAY' WHERE id = ?";
+        try (Connection conn = DB.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, courierId);
+            stmt.setInt(2, orderId);
+            return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -128,6 +183,29 @@ public class OrderDAO {
         return items;
     }
 
+    public List<Order> getOrdersByRestaurant(int restaurantId) {
+        List<Order> orders = new ArrayList<>();
+        String sql = "SELECT o.*, u.full_name as customer_name, u.phone as customer_phone " +
+                "FROM orders o " +
+                "JOIN users u ON o.user_id = u.id " +
+                "WHERE o.restaurant_id = ? ORDER BY o.created_at DESC";
+        try (Connection conn = DB.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, restaurantId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                Order order = mapResultSetToOrder(rs);
+                order.setItems(getOrderItems(order.getId()));
+                order.setCustomerName(rs.getString("customer_name"));
+                order.setCustomerPhone(rs.getString("customer_phone"));
+                orders.add(order);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return orders;
+    }
+
     private Order mapResultSetToOrder(ResultSet rs) throws SQLException {
         Order order = new Order();
         order.setId(rs.getInt("id"));
@@ -139,6 +217,59 @@ public class OrderDAO {
         order.setDeliveryFee(rs.getDouble("delivery_fee"));
         order.setStatus(rs.getString("status"));
         order.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+
+        if (hasColumn(rs, "courier_id")) {
+            Object courierObj = rs.getObject("courier_id");
+            if (courierObj != null) {
+                order.setCourierId(rs.getInt("courier_id"));
+            }
+        }
+
         return order;
+    }
+
+    public static List<Order> getOrdersByStatus(String status) {
+        List<Order> orders = new ArrayList<>();
+        String sql = "SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC";
+        try (Connection conn = DB.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, status);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                Order order = mapResultSetToOrder(rs);
+                order.setItems(getOrderItems(order.getId()));
+                orders.add(order);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return orders;
+    }
+
+    public static List<Order> getAllOrders() {
+        List<Order> orders = new ArrayList<>();
+        String sql = "SELECT * FROM orders ORDER BY created_at DESC";
+        try (Connection conn = DB.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                Order order = mapResultSetToOrder(rs);
+                order.setItems(getOrderItems(order.getId()));
+                orders.add(order);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return orders;
+    }
+
+
+    private boolean hasColumn(ResultSet rs, String column) {
+        try {
+            rs.findColumn(column);
+            return true;
+        } catch (SQLException e) {
+            return false;
+        }
     }
 }
