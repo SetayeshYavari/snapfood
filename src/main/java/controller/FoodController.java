@@ -5,6 +5,9 @@ import model.FoodItem;
 import services.FoodItemService;
 import utils.SimpleJwtUtil;
 
+import java.util.Map;
+
+import static java.lang.Double.parseDouble;
 import static spark.Spark.*;
 
 public class FoodController {
@@ -18,6 +21,24 @@ public class FoodController {
                 res.type("application/json");
                 return gson.toJson(service.getMenuByRestaurant(restaurantId));
             });
+
+            get("/search", (req, res) -> {
+                String keyword = req.queryParams("q");
+                if (keyword == null || keyword.trim().isEmpty()) {
+                    res.status(400);
+                    return gson.toJson(new ErrorResponse("Search keyword 'q' is required"));
+                }
+
+                Double minPrice = parseDouble(req.queryParams("minPrice"));
+                Double maxPrice = parseDouble(req.queryParams("maxPrice"));
+                String category = req.queryParams("category");
+                Double minRating = parseDouble(req.queryParams("rating"));
+
+                Map<String, Object> result = service.searchFoodItems(keyword, minPrice, maxPrice, category, minRating);
+                res.type("application/json");
+                return gson.toJson(result);
+            });
+
 
             before("/*", (req, res) -> {
                 String authHeader = req.headers("Authorization");

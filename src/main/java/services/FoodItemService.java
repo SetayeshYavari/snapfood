@@ -3,7 +3,9 @@ package services;
 import DAO.FoodItemDAO;
 import model.FoodItem;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class FoodItemService {
 
@@ -28,5 +30,15 @@ public class FoodItemService {
     public boolean deleteFoodItem(int id, int restaurantId) {
         return dao.deleteFoodItem(id, restaurantId);
     }
+
+    public Map<String, Object> searchFoodItems(String keyword, Double minPrice, Double maxPrice, String category, Double minRating) {
+        List<FoodItem> matched = dao.searchFoodItems(keyword, minPrice, maxPrice, category, minRating);
+        List<FoodItem> related = dao.findRelatedFoodItems(category != null ? category : "", keyword);
+        Map<String, Object> result = new HashMap<>();
+        result.put("results", matched);
+        result.put("related", related);
+        return result;
+    }
 }
+
 
