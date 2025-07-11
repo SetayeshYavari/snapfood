@@ -15,7 +15,7 @@ import static spark.Spark.*;
 public class AdminController {
     private static final Gson gson = new Gson();
     private static final UserService userService = new UserService();
-    private static final OrderService orderService = new OrderService();
+    static final OrderService orderService = new OrderService();
 
     public static void initRoutes() {
         path("/admin", () -> {

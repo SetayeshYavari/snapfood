@@ -1,6 +1,7 @@
 package model;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Order {
@@ -17,12 +18,14 @@ public class Order {
     private String customerName;
     private String customerPhone;
     private Integer courierId;
+    private List<String> statusHistory = new ArrayList<>();
 
     public Order() {}
 
     public Order(int id, int userId, int restaurantId, String address,
                  double totalAmount, double tax, double deliveryFee,
-                 String status, LocalDateTime createdAt, List<OrderItem> items, String customerName, String customerPhone, Integer courierId) {
+                 String status, LocalDateTime createdAt, List<OrderItem> items, String customerName, String customerPhone,
+                 Integer courierId, List<String> statusHistory) {
         this.id = id;
         this.userId = userId;
         this.restaurantId = restaurantId;
@@ -36,6 +39,7 @@ public class Order {
         this.customerName = customerName;
         this.customerPhone = customerPhone;
         this.courierId = courierId;
+        this.statusHistory = statusHistory != null ? statusHistory : new ArrayList<>();
     }
 
     public int getId() {
@@ -140,5 +144,17 @@ public class Order {
 
     public void setCourierId(Integer courierId) {
         this.courierId = courierId;
+    }
+
+    public List<String> getStatusHistory() {
+        return statusHistory;
+    }
+
+    public void setStatusHistory(List<String> statusHistory) {
+        this.statusHistory = statusHistory;
+    }
+
+    public void addStatusToHistory(String statusUpdate) {
+        this.statusHistory.add(statusUpdate);
     }
 }

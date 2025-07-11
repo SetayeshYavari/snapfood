@@ -6,6 +6,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import spark.Request;
 
 public class SimpleJwtUtil {
     private static final String SECRET = "YourSuperSecretKeyThatIsLongEnoughForHS256";
@@ -94,6 +95,15 @@ public class SimpleJwtUtil {
         Matcher matcher = Pattern.compile(regex).matcher(json);
         if (matcher.find()) return Long.parseLong(matcher.group(1));
         throw new RuntimeException("Value not found in token");
+    }
+
+    public static String getRoleFromRequest(Request req) {
+        String authHeader = req.headers("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return null;
+        }
+        String token = authHeader.substring(7);
+        return getUserRole(token); // already exists
     }
 }
 

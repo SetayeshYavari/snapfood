@@ -93,5 +93,22 @@ public class OrderService {
         return OrderDAO.getAllOrders();
     }
 
+    public boolean updateStatusBySeller(int orderId, String newStatus) {
+        Order order = dao.getOrderById(orderId);
+        if (order == null) return false;
+
+        boolean updated = dao.updateOrderStatus(orderId, newStatus);
+        if (updated) {
+            dao.addStatusHistory(orderId, newStatus); // track status change
+            // You can later add notification trigger here
+            return true;
+        }
+        return false;
+    }
+
+    public List<String> getStatusHistory(int orderId) {
+        return dao.getOrderStatusHistory(orderId);
+    }
+
 
 }

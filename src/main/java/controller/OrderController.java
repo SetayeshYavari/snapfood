@@ -7,7 +7,10 @@ import utils.SimpleJwtUtil;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import services.OrderService;
 
+import static controller.AdminController.orderService;
 import static spark.Spark.*;
 
 public class OrderController {
@@ -134,6 +137,29 @@ public class OrderController {
                 return gson.toJson(orders);
             });
 
+            // Seller updates order status
+            put("/orders/:id/status", (req, res) -> {
+                int orderId = Integer.parseInt(req.params(":id"));
+                String newStatus = new Gson().fromJson(req.body(), Map.class).get("status").toString();
+
+                String userRole = SimpleJwtUtil.getRoleFromRequest(req);
+                if (!"seller".equals(userRole)) {
+                    res.status(403);
+                    return gson.toJson(new ErrorResponse("Only sellers can update status"));
+                }
+
+                boolean result = orderService.updateStatusBySeller(orderId, newStatus);
+                if (result) return gson.toJson(Map.of("message", "Status updated to " + newStatus));
+                res.status(404);
+                return gson.toJson(new ErrorResponse("Order not found or update failed"));
+            });
+
+// Get order status history
+            get("/orders/:id/status-history", (req, res) -> {
+                int orderId = Integer.parseInt(req.params(":id"));
+                List<String> history = orderService.getStatusHistory(orderId);
+                return gson.toJson(history);
+            });
 
         });
     }

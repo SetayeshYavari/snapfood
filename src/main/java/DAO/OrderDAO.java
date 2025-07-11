@@ -160,7 +160,7 @@ public class OrderDAO {
         return false;
     }
 
-    public List<OrderItem> getOrderItems(int orderId) {
+    public static List<OrderItem> getOrderItems(int orderId) {
         List<OrderItem> items = new ArrayList<>();
         String sql = "SELECT * FROM order_items WHERE order_id = ?";
         try (Connection conn = DB.getConnection();
@@ -206,7 +206,7 @@ public class OrderDAO {
         return orders;
     }
 
-    private Order mapResultSetToOrder(ResultSet rs) throws SQLException {
+    private static Order mapResultSetToOrder(ResultSet rs) throws SQLException {
         Order order = new Order();
         order.setId(rs.getInt("id"));
         order.setUserId(rs.getInt("user_id"));
@@ -264,7 +264,7 @@ public class OrderDAO {
     }
 
 
-    private boolean hasColumn(ResultSet rs, String column) {
+    private static boolean hasColumn(ResultSet rs, String column) {
         try {
             rs.findColumn(column);
             return true;
@@ -272,4 +272,37 @@ public class OrderDAO {
             return false;
         }
     }
+
+    // Add status change to order_status_history table
+    public void addStatusHistory(int orderId, String newStatus) {
+        String sql = "INSERT INTO order_status_history (order_id, status, changed_at) VALUES (?, ?, CURRENT_TIMESTAMP)";
+        try (Connection conn = DB.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, orderId);
+            stmt.setString(2, newStatus);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Retrieve status change history
+    public List<String> getOrderStatusHistory(int orderId) {
+        List<String> history = new ArrayList<>();
+        String sql = "SELECT status, changed_at FROM order_status_history WHERE order_id = ? ORDER BY changed_at ASC";
+        try (Connection conn = DB.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, orderId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                String statusRecord = rs.getString("changed_at") + " → " + rs.getString("status");
+                history.add(statusRecord);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return history;
+    }
+
+
 }
