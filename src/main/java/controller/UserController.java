@@ -1,21 +1,27 @@
 package controller;
 
+import Messages.ErrorResponse;
+import Messages.SuccessResponse;
 import com.google.gson.Gson;
-import model.User;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import model.*;
 import services.UserService;
 import utils.SimpleJwtUtil;
 
 import static spark.Spark.*;
 
 public class UserController {
+
     private static final UserService userService = new UserService();
     private static final Gson gson = new Gson();
 
     public static void initRoutes() {
         before("/users/*", (req, res) -> {
+            String path = req.pathInfo();
             if (req.requestMethod().equals("OPTIONS") ||
-                    req.pathInfo().equals("/users/register") ||
-                    req.pathInfo().equals("/users/login")) {
+                    path.equals("/users/register") ||
+                    path.equals("/users/login")) {
                 return;
             }
 
@@ -31,6 +37,7 @@ public class UserController {
                 halt(401, gson.toJson(new ErrorResponse("Invalid or expired token")));
             }
         });
+
         path("/users", () -> {
             get("", (req, res) -> gson.toJson(userService.getAllUsers()));
 
@@ -39,55 +46,44 @@ public class UserController {
                 User user = userService.getUser(id);
                 if (user == null) {
                     res.status(404);
-                    return "User not found";
+                    return gson.toJson(new ErrorResponse("User not found"));
                 }
                 return gson.toJson(user);
             });
 
-            // Register
             post("/register", (req, res) -> {
-                User user = gson.fromJson(req.body(), User.class);
-                User registered = userService.register(user);
-                if (registered == null) {
+                try {
+                    User user = createUserFromRole(req.body());
+                    user.validateRequiredFields();
+
+                    User registered = userService.register(user);
+                    if (registered == null) {
+                        res.status(400);
+                        return gson.toJson(new ErrorResponse("Phone already registered"));
+                    }
+
+                    res.status(201);
+                    return gson.toJson(registered);
+                } catch (Exception e) {
                     res.status(400);
-                    return gson.toJson(new ErrorResponse("Phone already registered"));
+                    return gson.toJson(new ErrorResponse(e.getMessage()));
                 }
-                res.status(201);
-                return gson.toJson(registered);
             });
 
-            // Login
             post("/login", (req, res) -> {
-                User loginUser = gson.fromJson(req.body(), User.class);
-                User loggedIn = userService.login(loginUser.getPhone(), loginUser.getPassword());
+                LoginRequest loginReq = gson.fromJson(req.body(), LoginRequest.class);
+
+                User loggedIn = userService.login(loginReq.getPhone(), loginReq.getPassword());
                 if (loggedIn == null) {
                     res.status(401);
                     return gson.toJson(new ErrorResponse("Invalid phone or password"));
                 }
 
                 String token = SimpleJwtUtil.generateToken(loggedIn.getId(), loggedIn.getRole());
+
                 LoginResponse response = new LoginResponse(loggedIn);
                 response.token = token;
                 return gson.toJson(response);
-            });
-
-            before("/users/*", (req, res) -> {
-                String path = req.pathInfo();
-                if (req.requestMethod().equals("OPTIONS") ||
-                        path.equals("/users/login") ||
-                        path.equals("/users/register")) return;
-
-                String authHeader = req.headers("Authorization");
-                if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                    res.status(401);
-                    halt(401, gson.toJson(new ErrorResponse("Missing or invalid token")));
-                }
-
-                String token = authHeader.substring(7);
-                if (!SimpleJwtUtil.validateToken(token)) {
-                    res.status(401);
-                    halt(401, gson.toJson(new ErrorResponse("Invalid or expired token")));
-                }
             });
 
             get("/:id/profile", (req, res) -> {
@@ -100,7 +96,6 @@ public class UserController {
                 return gson.toJson(user);
             });
 
-
             put("/:id/profile", (req, res) -> {
                 int id = Integer.parseInt(req.params(":id"));
                 User existing = userService.getUser(id);
@@ -109,30 +104,18 @@ public class UserController {
                     return gson.toJson(new ErrorResponse("User not found"));
                 }
 
-                User update = gson.fromJson(req.body(), User.class);
+                User update = createUserFromRole(req.body());
 
-                // Always updatable for all roles
                 if (update.getFullName() != null) existing.setFullName(update.getFullName());
                 if (update.getPhone() != null) existing.setPhone(update.getPhone());
                 if (update.getEmail() != null) existing.setEmail(update.getEmail());
                 if (update.getAddress() != null) existing.setAddress(update.getAddress());
-                if (update.getProfilePhotoUrl() != null) existing.setProfilePhotoUrl(update.getProfilePhotoUrl());
+                if (update.getProfileImageBase64() != null) existing.setProfileImageBase64(update.getProfileImageBase64());
 
-                // Bank info only for seller or courier
-                if ("seller".equalsIgnoreCase(existing.getRole()) || "courier".equalsIgnoreCase(existing.getRole())) {
-                    if (update.getBankInfo() != null) {
-                        existing.setBankInfo(update.getBankInfo());
-                    }
-                }
-
-                // Restaurant info only for seller
-                if ("seller".equalsIgnoreCase(existing.getRole())) {
-                    if (update.getBrandName() != null) {
-                        existing.setBrandName(update.getBrandName());
-                    }
-                    if (update.getRestaurantDescription() != null) {
-                        existing.setRestaurantDescription(update.getRestaurantDescription());
-                    }
+                if (existing instanceof Vendor && update instanceof Vendor) {
+                    ((Vendor) existing).setBankInfo(((Vendor) update).getBankInfo());
+                } else if (existing instanceof Courier && update instanceof Courier) {
+                    ((Courier) existing).setBankInfo(((Courier) update).getBankInfo());
                 }
 
                 User updated = userService.updateUser(id, existing);
@@ -144,22 +127,35 @@ public class UserController {
                 return gson.toJson(updated);
             });
 
-
             delete("/:id", (req, res) -> {
                 int id = Integer.parseInt(req.params(":id"));
                 boolean deleted = userService.deleteUser(id);
                 if (!deleted) {
                     res.status(404);
-                    return "User not found";
+                    return gson.toJson(new ErrorResponse("User not found"));
                 }
-                return "User deleted";
+                return gson.toJson(new SuccessResponse("User deleted successfully"));
             });
         });
     }
 
-    private static class ErrorResponse {
-        String error;
-        public ErrorResponse(String error) { this.error = error; }
+    private static User createUserFromRole(String json) {
+        JsonObject jsonObject = JsonParser.parseString(json).getAsJsonObject();
+        if (!jsonObject.has("role")) {
+            throw new IllegalArgumentException("Role field is required");
+        }
+        String role = jsonObject.get("role").getAsString();
+
+        switch (role.toLowerCase()) {
+            case "vendor":
+                return gson.fromJson(json, Vendor.class);
+            case "buyer":
+                return gson.fromJson(json, Buyer.class);
+            case "courier":
+                return gson.fromJson(json, Courier.class);
+            default:
+                throw new IllegalArgumentException("Invalid role: " + role);
+        }
     }
 
     private static class LoginResponse {
@@ -167,7 +163,7 @@ public class UserController {
         String name;
         String role;
         String message;
-        String token; // JWT token
+        String token;
 
         public LoginResponse(User user) {
             this.id = user.getId();
@@ -176,5 +172,15 @@ public class UserController {
             this.message = "Login successful!";
         }
     }
-}
 
+    private static class LoginRequest {
+        private String phone;
+        private String password;
+
+        public String getPhone() { return phone; }
+        public void setPhone(String phone) { this.phone = phone; }
+
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
+    }
+}

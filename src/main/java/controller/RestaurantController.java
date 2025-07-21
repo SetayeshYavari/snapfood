@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import model.Restaurant;
 import services.RestaurantService;
 import utils.SimpleJwtUtil;
+import Messages.ErrorResponse;
+import Messages.SuccessResponse;
 
 import static spark.Spark.*;
 
@@ -27,7 +29,7 @@ public class RestaurantController {
             }
 
             String role = SimpleJwtUtil.getRoleFromToken(token);
-            int sellerId = SimpleJwtUtil.getUserIdFromToken(token);
+            int id = SimpleJwtUtil.getUserIdFromToken(token);
 
             if (!role.equals("seller")) {
                 res.status(403);
@@ -35,31 +37,20 @@ public class RestaurantController {
             }
 
             Restaurant restaurant = gson.fromJson(req.body(), Restaurant.class);
-            restaurant.setSellerId(sellerId);
+            restaurant.setId(id);
 
             restaurantService.registerRestaurant(restaurant);
             return gson.toJson(new SuccessResponse("Restaurant registered. Awaiting approval."));
         });
 
         get("/restaurants", (req, res) -> {
-            return gson.toJson(restaurantService.getApprovedRestaurants());
+            return gson.toJson(restaurantService.getAllApprovedRestaurants());
         });
 
-        // Admin approve route (optional)
         put("/admin/restaurants/:id/approve", (req, res) -> {
             int id = Integer.parseInt(req.params(":id"));
             restaurantService.approveRestaurant(id);
             return gson.toJson(new SuccessResponse("Restaurant approved."));
         });
-    }
-
-    static class ErrorResponse {
-        String error;
-        public ErrorResponse(String error) { this.error = error; }
-    }
-
-    static class SuccessResponse {
-        String message;
-        public SuccessResponse(String message) { this.message = message; }
     }
 }

@@ -103,7 +103,7 @@ public class SimpleJwtUtil {
             return null;
         }
         String token = authHeader.substring(7);
-        return getUserRole(token); // already exists
+        return getRoleFromToken(token); // already exists
     }
 }
 

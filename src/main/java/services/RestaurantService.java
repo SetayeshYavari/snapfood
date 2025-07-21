@@ -13,13 +13,14 @@ public class RestaurantService {
         dao.addRestaurant(r);
     }
 
-    public List<Restaurant> getApprovedRestaurants() throws SQLException {
-        return dao.getAllApprovedRestaurants();
+    public List<Restaurant> getAllApprovedRestaurants() throws SQLException {
+        return dao.getRestaurantsByApproval(true);
     }
 
     public List<Restaurant> getPendingRestaurants() throws SQLException {
-        return dao.getPendingRestaurants();
+        return dao.getRestaurantsByApproval(false);
     }
+
 
     public void approveRestaurant(int id) throws SQLException {
         dao.approveRestaurant(id);

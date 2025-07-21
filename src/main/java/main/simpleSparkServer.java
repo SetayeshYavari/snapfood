@@ -7,8 +7,6 @@ import controller.UserController;
 import controller.RestaurantController;
 import controller.FoodController;
 
-
-
 public class simpleSparkServer {
     public static void main(String[] args) {
         port(8080);

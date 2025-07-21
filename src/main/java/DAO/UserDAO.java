@@ -1,8 +1,8 @@
 package DAO;
 
+import model.BankInfo;
 import model.User;
 import utils.DB;
-import utils.PasswordUtil;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -13,7 +13,7 @@ public class UserDAO {
     // ✅ Add user and return inserted user with ID
     public static User addUser(User user) {
 
-        String sql = "INSERT INTO users (full_name, phone, email, password, role, address, profile_photo_url, bank_info, brand_name, restaurant_description, salt) " +
+        String sql = "INSERT INTO users (full_name, phone, email, password, role, address, profile_photo_url, bank_name, account_number, status, salt) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
 
         try (Connection conn = DB.getConnection();
@@ -25,10 +25,10 @@ public class UserDAO {
             stmt.setString(4, user.getPassword());
             stmt.setString(5, user.getRole());
             stmt.setString(6, user.getAddress());
-            stmt.setString(7, user.getProfilePhotoUrl());
-            stmt.setString(8, user.getBankInfo());
-            stmt.setString(9, user.getBrandName());
-            stmt.setString(10, user.getRestaurantDescription());
+            stmt.setString(7, user.getProfileImageBase64());
+            stmt.setString(8, user.getBankInfo().getBankName());
+            stmt.setString(9, user.getBankInfo().getAccountNumber());
+            stmt.setString(10, user.getStatus());
             stmt.setString(11, user.getSalt());
 
             ResultSet rs = stmt.executeQuery();
@@ -47,7 +47,7 @@ public class UserDAO {
 
     // ✅ Update user
     public static boolean updateUser(User user) {
-        String sql = "UPDATE users SET full_name=?, phone=?, email=?, password=?, role=?, address=?, profile_photo_url=?, bank_info=?, brand_name=?, restaurant_description=? WHERE id=?";
+        String sql = "UPDATE users SET full_name=?, phone=?, email=?, password=?, role=?, address=?, profile_photo_url=?, bank_name=?, account_number=?, status=?, salt=?  WHERE id=?";
 
         try (Connection conn = DB.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -58,11 +58,12 @@ public class UserDAO {
             stmt.setString(4, user.getPassword());
             stmt.setString(5, user.getRole());
             stmt.setString(6, user.getAddress());
-            stmt.setString(7, user.getProfilePhotoUrl());
-            stmt.setString(8, user.getBankInfo());
-            stmt.setString(9, user.getBrandName());
-            stmt.setString(10, user.getRestaurantDescription());
-            stmt.setInt(11, user.getId());
+            stmt.setString(7, user.getProfileImageBase64());
+            stmt.setString(8, user.getBankInfo().getBankName());
+            stmt.setString(9, user.getBankInfo().getAccountNumber());
+            stmt.setString(10, user.getStatus());
+            stmt.setString(11, user.getSalt());
+            stmt.setInt(12, user.getId());
 
             int rowsAffected = stmt.executeUpdate();
             return rowsAffected > 0;
@@ -154,21 +155,21 @@ public class UserDAO {
 
     // ✅ Helper method to convert ResultSet → User
     private static User extractUser(ResultSet rs) throws SQLException {
-        return new User(
-                rs.getInt("id"),
-                rs.getString("full_name"),
-                rs.getString("phone"),
-                rs.getString("email"),
-                rs.getString("password"),
-                rs.getString("role"),
-                rs.getString("address"),
-                rs.getString("profile_photo_url"),
-                rs.getString("bank_info"),
-                rs.getString("brand_name"),
-                rs.getString("restaurant_description"),
-                rs.getString("salt")
-        );
+        int id = rs.getInt("id");
+        String fullName = rs.getString("full_name");
+        String phone = rs.getString("phone");
+        String email = rs.getString("email");
+        String password = rs.getString("password");
+        String role = rs.getString("role");
+        String address = rs.getString("address");
+        String profilePhoto = rs.getString("profile_photo_url");
+        String bank_name = rs.getString("bank_name");
+        String account_number = rs.getString("account_number");
+        BankInfo bankInfo = new BankInfo(bank_name, account_number);
+        String status = rs.getString("status");
+        String salt = rs.getString("salt");
+
+        return User.createUserFromRole(id, fullName, phone, email, password, role, address, profilePhoto, bankInfo, status, salt);
     }
+
 }
-
-

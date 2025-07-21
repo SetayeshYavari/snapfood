@@ -5,6 +5,7 @@ import utils.DB;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class FoodItemDAO {
@@ -45,14 +46,15 @@ public class FoodItemDAO {
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
         try (Connection conn = DB.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, item.getRestaurantId());
+            stmt.setInt(1, item.getVendor_id());
             stmt.setString(2, item.getName());
-            stmt.setString(3, item.getImageUrl());
+            stmt.setString(3, item.getImageBase64());
             stmt.setString(4, item.getDescription());
             stmt.setDouble(5, item.getPrice());
-            stmt.setInt(6, item.getStock());
-            stmt.setString(7, item.getCategory());
-            stmt.setString(8, item.getKeywords());
+            stmt.setInt(6, item.getSupply());
+            List<String> keywords = item.getKeywords();
+            String keywordsStr = String.join(",", keywords);
+            stmt.setString(8, keywordsStr);
 
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
@@ -71,14 +73,15 @@ public class FoodItemDAO {
         try (Connection conn = DB.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, item.getName());
-            stmt.setString(2, item.getImageUrl());
+            stmt.setString(2, item.getImageBase64());
             stmt.setString(3, item.getDescription());
             stmt.setDouble(4, item.getPrice());
-            stmt.setInt(5, item.getStock());
-            stmt.setString(6, item.getCategory());
-            stmt.setString(7, item.getKeywords());
+            stmt.setInt(5, item.getSupply());
+            List<String> keywords = item.getKeywords();
+            String keywordsStr = String.join(",", keywords);
+            stmt.setString(7, keywordsStr);
             stmt.setInt(8, item.getId());
-            stmt.setInt(9, item.getRestaurantId());
+            stmt.setInt(9, item.getVendor_id());
 
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -169,14 +172,18 @@ public class FoodItemDAO {
     private FoodItem mapResultSetToFoodItem(ResultSet rs) throws SQLException {
         FoodItem item = new FoodItem();
         item.setId(rs.getInt("id"));
-        item.setRestaurantId(rs.getInt("restaurant_id"));
+        item.setVendor_id(rs.getInt("restaurant_id"));
         item.setName(rs.getString("name"));
-        item.setImageUrl(rs.getString("image_url"));
+        item.setImageBase64(rs.getString("image_url"));
         item.setDescription(rs.getString("description"));
         item.setPrice(rs.getDouble("price"));
-        item.setStock(rs.getInt("stock"));
-        item.setCategory(rs.getString("category"));
-        item.setKeywords(rs.getString("keywords"));
+        item.setSupply(rs.getInt("stock"));
+        String keywordStr = rs.getString("keywords");
+        List<String> keywordList = new ArrayList<>();
+        if (keywordList != null) {
+            keywordList = Arrays.asList(keywordStr.split(","));
+        }
+        item.setKeywords(keywordList);
         return item;
     }
 }

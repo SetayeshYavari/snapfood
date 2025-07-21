@@ -1,160 +1,94 @@
 package model;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
 public class Order {
+    public enum Status {
+        submitted,
+        unpaid_and_cancelled,
+        waiting_vendor,
+        cancelled,
+        finding_courier,
+        on_the_way,
+        completed
+    }
+
     private int id;
-    private int userId;
-    private int restaurantId;
-    private String address;
-    private double totalAmount;
-    private double tax;
-    private double deliveryFee;
-    private String status;
-    private LocalDateTime createdAt;
-    private List<OrderItem> items;
-    private String customerName;
-    private String customerPhone;
-    private Integer courierId;
-    private List<String> statusHistory = new ArrayList<>();
+    private String deliveryAddress;
+    private int customerId;
+    private int vendorId;
+    private int couponId;
+    private int itemIds;
+    private int rawPrice;
+    private int taxFee;
+    private int additionalFee;
+    private int courierFee;
+    private int payPrice;
+    private int courierId;
+    private Status status;
+    private String createdAt;
+    private String updatedAt;
 
-    public Order() {}
-
-    public Order(int id, int userId, int restaurantId, String address,
-                 double totalAmount, double tax, double deliveryFee,
-                 String status, LocalDateTime createdAt, List<OrderItem> items, String customerName, String customerPhone,
-                 Integer courierId, List<String> statusHistory) {
+    public Order(int id, String deliveryAddress, int customerId, int vendorId, int couponId, int itemIds,
+                 int rawPrice, int taxFee, int additionalFee, int courierFee, int payPrice, int courierId,
+                 Status status, String createdAt, String updatedAt) {
         this.id = id;
-        this.userId = userId;
-        this.restaurantId = restaurantId;
-        this.address = address;
-        this.totalAmount = totalAmount;
-        this.tax = tax;
-        this.deliveryFee = deliveryFee;
+        this.deliveryAddress = deliveryAddress;
+        this.customerId = customerId;
+        this.vendorId = vendorId;
+        this.couponId = couponId;
+        this.itemIds = itemIds;
+        this.rawPrice = rawPrice;
+        this.taxFee = taxFee;
+        this.additionalFee = additionalFee;
+        this.courierFee = courierFee;
+        this.payPrice = payPrice;
+        this.courierId = courierId;
         this.status = status;
         this.createdAt = createdAt;
-        this.items = items;
-        this.customerName = customerName;
-        this.customerPhone = customerPhone;
-        this.courierId = courierId;
-        this.statusHistory = statusHistory != null ? statusHistory : new ArrayList<>();
+        this.updatedAt = updatedAt;
     }
 
-    public int getId() {
-        return id;
-    }
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
+    
+    public String getDeliveryAddress() { return deliveryAddress; }
+    public void setDeliveryAddress(String deliveryAddress) { this.deliveryAddress = deliveryAddress; }
+    
+    public int getCustomerId() { return customerId; }
+    public void setCustomerId(int customerId) { this.customerId = customerId; }
+    
+    public int getVendorId() { return vendorId; }
+    public void setVendorId(int vendorId) { this.vendorId = vendorId; }
+    
+    public int getCouponId() { return couponId; }
+    public void setCouponId(int couponId) { this.couponId = couponId; }
+    
+    public int getItemIds() { return itemIds; }
+    public void setItemIds(int itemIds) { this.itemIds = itemIds; }
+    
+    public int getRawPrice() { return rawPrice; }
+    public void setRawPrice(int rawPrice) { this.rawPrice = rawPrice; }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+    public int getTaxFee() { return taxFee; }
+    public void setTaxFee(int taxFee) { this.taxFee = taxFee; }
 
-    public int getUserId() {
-        return userId;
-    }
+    public int getAdditionalFee() { return additionalFee; }
+    public void setAdditionalFee(int additionalFee) { this.additionalFee = additionalFee; }
 
-    public void setUserId(int userId) {
-        this.userId = userId;
-    }
+    public int getCourierFee() { return courierFee; }
+    public void setCourierFee(int courierFee) { this.courierFee = courierFee; }
 
-    public int getRestaurantId() {
-        return restaurantId;
-    }
+    public int getPayPrice() { return payPrice; }
+    public void setPayPrice(int payPrice) { this.payPrice = payPrice; }
 
-    public void setRestaurantId(int restaurantId) {
-        this.restaurantId = restaurantId;
-    }
+    public int getCourierId() { return courierId; }
+    public void setCourierId(int courierId) { this.courierId = courierId; }
 
-    public String getAddress() {
-        return address;
-    }
+    public Status getStatus() { return status; }
+    public void setStatus(Status status) { this.status = status; }
 
-    public void setAddress(String address) {
-        this.address = address;
-    }
+    public String getCreatedAt() { return createdAt; }
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
 
-    public double getTotalAmount() {
-        return totalAmount;
-    }
-
-    public void setTotalAmount(double totalAmount) {
-        this.totalAmount = totalAmount;
-    }
-
-    public double getTax() {
-        return tax;
-    }
-
-    public void setTax(double tax) {
-        this.tax = tax;
-    }
-
-    public double getDeliveryFee() {
-        return deliveryFee;
-    }
-
-    public void setDeliveryFee(double deliveryFee) {
-        this.deliveryFee = deliveryFee;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public List<OrderItem> getItems() {
-        return items;
-    }
-
-    public void setItems(List<OrderItem> items) {
-        this.items = items;
-    }
-
-    public String getCustomerName() {
-        return customerName;
-    }
-
-    public void setCustomerName(String customerName) {
-        this.customerName = customerName;
-    }
-
-    public String getCustomerPhone() {
-        return customerPhone;
-    }
-
-    public void setCustomerPhone(String customerPhone) {
-        this.customerPhone = customerPhone;
-    }
-
-    public Integer getCourierId() {
-        return courierId;
-    }
-
-    public void setCourierId(Integer courierId) {
-        this.courierId = courierId;
-    }
-
-    public List<String> getStatusHistory() {
-        return statusHistory;
-    }
-
-    public void setStatusHistory(List<String> statusHistory) {
-        this.statusHistory = statusHistory;
-    }
-
-    public void addStatusToHistory(String statusUpdate) {
-        this.statusHistory.add(statusUpdate);
-    }
+    public String getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
 }

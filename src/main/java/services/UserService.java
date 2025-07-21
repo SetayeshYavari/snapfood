@@ -8,48 +8,34 @@ import java.util.List;
 
 public class UserService {
 
-    public User register(User user) {
-        // Check if user with this phone already exists
-        System.out.println("☎️ Registering phone: " + user.getPhone());
-        User existing = UserDAO.findByPhone(user.getPhone());
-        System.out.println("🧠 Existing user: " + (existing == null ? "none" : existing.getId()));
+    public User register(User rawUser) {
+        // بررسی وجود شماره تلفن
+        User existing = UserDAO.findByPhone(rawUser.getPhone());
         if (existing != null) {
-            return null; // Phone already registered
+            return null; // شماره قبلا ثبت شده
         }
 
-        // Generate salt and hash password before storing
+        // ساخت سالت و هش کردن پسورد
         String salt = PasswordUtil.generateSalt();
-        String hashedPassword = PasswordUtil.hashPassword(user.getPassword(), salt);
+        String hashedPassword = PasswordUtil.hashPassword(rawUser.getPassword(), salt);
 
-        // Set the hashed password and salt
-        user.setPassword(hashedPassword);
-        user.setSalt(salt);
+        rawUser.setPassword(hashedPassword);
+        rawUser.setSalt(salt);
 
-        // Store the user with hashed password
-        return UserDAO.addUser(user);
+        return UserDAO.addUser(rawUser);
     }
 
     public User login(String phone, String password) {
         User user = UserDAO.findByPhone(phone);
         if (user != null) {
-            // Verify password with salt
-            System.out.println("🔍 User found in DB: " + user.getPhone());
-            boolean passwordCorrect = PasswordUtil.verifyPassword(
-                    password,
-                    user.getSalt(),
-                    user.getPassword()
-            );
-            System.out.println("🔐 Password correct? " + passwordCorrect);
+            boolean passwordCorrect = PasswordUtil.verifyPassword(password, user.getSalt(), user.getPassword());
             if (passwordCorrect) {
                 return user;
             }
-        } else {
-            System.out.println("❌ No user found with phone: " + phone);
         }
         return null;
     }
 
-    // The rest of your methods remain unchanged
     public List<User> getAllUsers() {
         return UserDAO.getAllUsers();
     }
@@ -59,7 +45,7 @@ public class UserService {
     }
 
     public User updateUser(int id, User updatedUser) {
-        updatedUser.setId(id); // Ensure correct ID
+        updatedUser.setId(id);
         boolean success = UserDAO.updateUser(updatedUser);
         return success ? updatedUser : null;
     }

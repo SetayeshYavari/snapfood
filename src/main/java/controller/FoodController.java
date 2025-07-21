@@ -76,7 +76,7 @@ public class FoodController {
                 int sellerId = SimpleJwtUtil.getUserIdFromToken(token);
 
                 FoodItem existing = service.getFoodItem(foodId);
-                if (existing == null || existing.getRestaurantId() != update.getRestaurantId()) {
+                if (existing == null || existing.getVendor_id() != update.getVendor_id()) {
                     res.status(404);
                     return gson.toJson(new ErrorResponse("Food item not found or mismatched restaurant"));
                 }
@@ -100,7 +100,7 @@ public class FoodController {
                     return gson.toJson(new ErrorResponse("Food item not found"));
                 }
 
-                boolean ok = service.deleteFoodItem(foodId, existing.getRestaurantId());
+                boolean ok = service.deleteFoodItem(foodId, existing.getVendor_id());
                 if (!ok) {
                     res.status(500);
                     return gson.toJson(new ErrorResponse("Failed to delete food item"));

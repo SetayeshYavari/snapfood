@@ -2,19 +2,16 @@ package model;
 
 public class Restaurant {
     private int id;
-    private int sellerId;
     private String name;
     private String address;
     private String phone;
-    private String openingHours;
-    private String logoUrl;
+    private String logoBase64;
+    private int tax_fee;
+    private int additional_fee;
     private boolean approved;
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
-
-    public int getSellerId() { return sellerId; }
-    public void setSellerId(int sellerId) { this.sellerId = sellerId; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -25,12 +22,15 @@ public class Restaurant {
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
 
-    public String getOpeningHours() { return openingHours; }
-    public void setOpeningHours(String openingHours) { this.openingHours = openingHours; }
+    public String getLogoBase64() { return logoBase64; }
+    public void setLogoBase64(String logoBase64) { this.logoBase64 = logoBase64; }
 
-    public String getLogoUrl() { return logoUrl; }
-    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
+    public int getTax_fee() { return tax_fee; }
+    public void setTax_fee(int tax_fee) {this.tax_fee = tax_fee; }
 
-    public boolean isApproved() { return approved; }
-    public void setApproved(boolean approved) { this.approved = approved; }
+    public int getAdditional_fee() { return additional_fee; }
+    public void setAdditional_fee(int additional_fee) {this.additional_fee = additional_fee; }
+
+    public boolean getApproved() { return approved; }
+    public void setApproved(boolean approved) {this.approved = approved; }
 }
